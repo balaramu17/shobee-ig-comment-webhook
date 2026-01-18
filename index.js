@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 // ===== CONFIG =====
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const VERIFY_TOKEN = "shobee_verify_123";
 const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
 const GRAPH_API = "https://graph.facebook.com/v19.0";
 
