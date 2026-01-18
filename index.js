@@ -18,7 +18,7 @@ const processedUsers = new Set();
 
 // Health check
 app.get("/", (req, res) => {
-  res.send("Shobee IG Automation running");
+  res.send("NEW CODE LIVE 123");
 });
 
 // Webhook verification
