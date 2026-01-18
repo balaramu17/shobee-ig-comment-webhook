@@ -1,15 +1,28 @@
 const express = require("express");
-const app = express();
+const axios = require("axios");
 
+const app = express();
 app.use(express.json());
 
+// ===== CONFIG =====
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
+const GRAPH_API = "https://graph.facebook.com/v19.0";
+
+const DM_MESSAGE =
+  "Hi, You can get full guide, tips, tools to increase your ecommerce sales from this Link https://shobee.in/resources";
+
+// In-memory memory (RAM only, zero disk usage)
+const processedUsers = new Set();
+// ==================
+
+// Health check
 app.get("/", (req, res) => {
-  res.send("Shobee IG Webhook is running");
+  res.send("Shobee IG Automation running");
 });
 
+// Webhook verification
 app.get("/webhook", (req, res) => {
-  const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
@@ -17,15 +30,54 @@ app.get("/webhook", (req, res) => {
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
     return res.status(200).send(challenge);
   }
-
   return res.sendStatus(403);
 });
 
-app.post("/webhook", (req, res) => {
-  console.log("Webhook event:", JSON.stringify(req.body, null, 2));
+// Webhook receiver
+app.post("/webhook", async (req, res) => {
+  // Always acknowledge Meta immediately
   res.sendStatus(200);
+
+  try {
+    const entry = req.body.entry?.[0];
+    const change = entry?.changes?.[0];
+    const value = change?.value;
+
+    if (!value || !value.text || !value.from?.id) return;
+
+    const commentText = value.text.toLowerCase();
+    const commenterId = value.from.id;
+
+    // Keyword rule
+    if (!commentText.includes("shobee")) return;
+
+    // Memory rule (send only once)
+    if (processedUsers.has(commenterId)) return;
+
+    // Send DM
+    await sendDM(commenterId);
+
+    // Mark as processed
+    processedUsers.add(commenterId);
+
+  } catch (err) {
+    // Never crash webhook
+  }
 });
 
+// DM sender
+async function sendDM(userId) {
+  const url = `${GRAPH_API}/me/messages?access_token=${IG_ACCESS_TOKEN}`;
+
+  const payload = {
+    recipient: { id: userId },
+    message: { text: DM_MESSAGE }
+  };
+
+  await axios.post(url, payload);
+}
+
+// Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
